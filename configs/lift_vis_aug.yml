@@ -17,4 +17,7 @@ policy:
     image_feature_dim: 128
     proprio_feature_dim: 64
     touch_feature_dim: 32
-  suffix: null
+  suffix: aug
+
+
+

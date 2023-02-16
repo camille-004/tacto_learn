@@ -3,22 +3,27 @@ from typing import Optional
 import gym
 import numpy as np
 import torch as th
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from torch import nn
 
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from tacto_learn.utils.augment import RandomShiftsAug
+
 
 class CNN(nn.Module):
     def __init__(self, obs_shape, feature_dim, num_layers=2, num_filters=32):
         super().__init__()
 
         assert len(obs_shape) == 3
-        assert obs_shape[0] == 3 or obs_shape[0] == 2, f"Require channel first, obs_shape {obs_shape}"
+        assert (
+            obs_shape[0] == 3 or obs_shape[0] == 2
+        ), f"Require channel first, obs_shape {obs_shape}"
         self.obs_shape = obs_shape
 
         layers = [
             nn.Conv2d(obs_shape[0], num_filters, 3, stride=2),
             nn.ReLU(),
         ]
+
         for i in range(num_layers - 1):
             layers.append(nn.Conv2d(num_filters, num_filters, 3, stride=1))
             layers.append(nn.ReLU())
@@ -38,6 +43,24 @@ class CNN(nn.Module):
         x = self.fc(x)
         return x
 
+
+class CNNWithAug(nn.Module):
+    def __init__(self, obs_shape, feature_dim, pad):
+        super().__init__()
+        self.module_list = nn.ModuleList(
+            [RandomShiftsAug(pad=pad), CNN(obs_shape, feature_dim)]
+        )
+
+    def forward(self, x):
+        for m in self.module_list:
+            x = m(x)
+
+        return x
+
+
+# data augmentation, change CNN architecture (pooling (mean, max, sum pooling), batch norm, layernorm)
+# parent folder of two runs
+
 class Encoder(nn.Module):
     def __init__(self, obs_shape):
         super().__init__()
@@ -47,13 +70,13 @@ class Encoder(nn.Module):
 
         self.convnet = nn.Sequential(
             nn.Conv2d(obs_shape[0], 32, 3, stride=2),
-            nn.ReLU(), 
+            nn.ReLU(),
             nn.Conv2d(32, 32, 3, stride=1),
-            nn.ReLU(), 
+            nn.ReLU(),
             nn.Conv2d(32, 32, 3, stride=1),
-            nn.ReLU(), 
+            nn.ReLU(),
             nn.Conv2d(32, 32, 3, stride=1),
-            nn.ReLU()
+            nn.ReLU(),
         )
 
     def forward(self, obs):
@@ -67,8 +90,8 @@ class Encoder(nn.Module):
 
 class DictExtractor(BaseFeaturesExtractor):
     def __init__(
-        self, 
-        observation_space: gym.spaces.Dict, 
+        self,
+        observation_space: gym.spaces.Dict,
         image_feature_dim: Optional[int] = -1,
         proprio_feature_dim: Optional[int] = -1,
         object_feature_dim: Optional[int] = -1,
@@ -87,24 +110,29 @@ class DictExtractor(BaseFeaturesExtractor):
         # so go over all the spaces and compute output feature sizes
         for key, subspace in observation_space.spaces.items():
             if "image" in key or "tactile_depth" in key:
-                # extractors[key] = CNN(subspace.shape, image_feature_dim)
-                extractors[key] = Encoder(subspace.shape)
-                total_concat_size += extractors[key].repr_dim
+                # extractors[key] = CNNWithAug(subspace.shape, image_feature_dim, 4)
+                extractors[key] = CNN(subspace.shape, image_feature_dim)
+                total_concat_size += image_feature_dim
+
+                # extractors[key] = Encoder(subspace.shape)
+                # total_concat_size += extractors[key].repr_dim
             else:
                 # Run through a simple MLP
                 if "proprio" in key:
-                    feature_dim = proprio_feature_dim               
+                    feature_dim = proprio_feature_dim
                 elif "touch" in key:
                     feature_dim = touch_feature_dim
                 elif "object" in key:
                     feature_dim = object_feature_dim
-                assert feature_dim > 0, f"Feature dimension should be provided for observation {key}"
+                assert (
+                    feature_dim > 0
+                ), f"Feature dimension should be provided for observation {key}"
 
                 extractors[key] = nn.Sequential(
                     nn.Linear(subspace.shape[0], hidden_dim),
                     nn.ReLU(),
                     nn.Linear(hidden_dim, feature_dim),
-                    nn.ReLU(),                
+                    nn.ReLU(),
                 )
                 total_concat_size += feature_dim
 

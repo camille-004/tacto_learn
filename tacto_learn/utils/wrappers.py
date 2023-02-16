@@ -4,7 +4,7 @@ This is useful when using these environments with code that assumes a gym-like
 interface.
 """
 
-import numpy as np 
+import numpy as np
 from gym import spaces
 from gym.core import Env
 
@@ -35,7 +35,11 @@ class Wrapper:
         while True:
             if isinstance(env, Wrapper):
                 if env.class_name() == self.class_name():
-                    raise Exception("Attempted to double wrap with Wrapper: {}".format(self.__class__.__name__))
+                    raise Exception(
+                        "Attempted to double wrap with Wrapper: {}".format(
+                            self.__class__.__name__
+                        )
+                    )
                 env = env.env
             else:
                 break
@@ -153,11 +157,14 @@ class GymWrapper(Wrapper, Env):
     Raises:
         AssertionError: [Object observations must be enabled if no keys]
     """
+
     def __init__(self, env, keys=None):
         # Run super method
         super().__init__(env=env)
         # Create name for gym
-        robots = "".join([type(robot.robot_model).__name__ for robot in self.env.robots])
+        robots = "".join(
+            [type(robot.robot_model).__name__ for robot in self.env.robots]
+        )
         self.name = robots + "_" + type(self.env).__name__
 
         # Get reward range
@@ -195,19 +202,11 @@ class GymWrapper(Wrapper, Env):
             if "image" in k or "tactile_depth" in k:
                 v = (v[2], v[0], v[1])
 
-            if "image" in k:    
-                space_dict[k] = spaces.Box(
-                    low=0,
-                    high=255,
-                    shape=v,
-                    dtype=np.uint8
-                )
+            if "image" in k:
+                space_dict[k] = spaces.Box(low=0, high=255, shape=v, dtype=np.uint8)
             else:
                 space_dict[k] = spaces.Box(
-                    low=-np.inf, 
-                    high=np.inf, 
-                    shape=v, 
-                    dtype=np.float32
+                    low=-np.inf, high=np.inf, shape=v, dtype=np.float32
                 )
         self.observation_space = spaces.Dict(space_dict)
 
@@ -261,7 +260,7 @@ class GymWrapper(Wrapper, Env):
         """
         ob_dict, reward, done, info = self.env.step(action)
         return self._extract_obs_dict(ob_dict), reward, done, info
-    
+
     def seed(self, seed=None):
         """
         Utility function to set numpy seed
