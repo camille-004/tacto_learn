@@ -97,6 +97,7 @@ class DictExtractor(BaseFeaturesExtractor):
         object_feature_dim: Optional[int] = -1,
         touch_feature_dim: Optional[int] = -1,
         hidden_dim: Optional[int] = 256,
+        suffix: Optional[str] = None
     ):
         # We do not know features-dim here before going over all the items,
         # so put something dummy for now. PyTorch requires calling
@@ -104,14 +105,16 @@ class DictExtractor(BaseFeaturesExtractor):
         super(DictExtractor, self).__init__(observation_space, features_dim=1)
 
         extractors = {}
-
         total_concat_size = 0
         # We need to know size of the output of this extractor,
         # so go over all the spaces and compute output feature sizes
         for key, subspace in observation_space.spaces.items():
             if "image" in key or "tactile_depth" in key:
-                # extractors[key] = CNNWithAug(subspace.shape, image_feature_dim, 4)
-                extractors[key] = CNN(subspace.shape, image_feature_dim)
+                if suffix == "aug":
+                    extractors[key] = CNNWithAug(subspace.shape, image_feature_dim, 4)
+                else:
+                    extractors[key] = CNN(subspace.shape, image_feature_dim)
+
                 total_concat_size += image_feature_dim
 
                 # extractors[key] = Encoder(subspace.shape)

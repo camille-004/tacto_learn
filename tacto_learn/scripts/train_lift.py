@@ -34,9 +34,12 @@ def make_env(env_cfg=None):
 def train_policy(env, policy_cfg, exp_name):
     # For SAC and DDPG, feature extractors should not be shared between actor and critic
     # See https://github.com/DLR-RM/stable-baselines3/pull/935
+
+    policy_kw = policy_cfg["features_extractor"]
+    policy_kw.update(dict(suffix=policy_cfg["suffix"]))
     policy_kwargs = dict(
         features_extractor_class=DictExtractor,
-        features_extractor_kwargs=policy_cfg["features_extractor"],
+        features_extractor_kwargs=policy_kw,
         share_features_extractor=False,
     )
 
@@ -95,7 +98,6 @@ def main():
     # Merge command line arguments with configs
     if args.seed is not None:
         cfg["seed"] = args.seed
-    print(cfg)
 
     # Generate experiment name
     # algorithm + env_name + robots + controller + obs_mode
