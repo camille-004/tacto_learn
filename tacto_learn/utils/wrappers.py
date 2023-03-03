@@ -178,10 +178,13 @@ class GymWrapper(Wrapper, Env):
             # Add image obs if requested
             if self.env.use_camera_obs:
                 keys += [f"{cam_name}_image" for cam_name in self.env.camera_names]
+            """
             if self.env.use_touch_obs:
                 keys += ["robot0_touch-state"]
+     
             if self.env.use_tactile_obs:
                 keys += ["robot0_tactile_depth-state"]
+            """
             # Iterate over all robots to add to state
             for idx in range(len(self.env.robots)):
                 keys += ["robot{}_proprio-state".format(idx)]

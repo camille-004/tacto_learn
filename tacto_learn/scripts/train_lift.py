@@ -25,7 +25,7 @@ def make_env(env_cfg=None):
         env_cfg["use_object_obs"] = False
     else:
         env_cfg["use_object_obs"] = True
-
+ 
     env = suite.make(**env_cfg)
     env = GymWrapper(env)
     return env
@@ -108,7 +108,7 @@ def main():
         obs_mode.append("visual")
     else:
         obs_mode.append("obj_state")
-    if env_cfg["use_touch_obs"]:
+    if "use_touch_obs" in env_cfg.keys() and env_cfg["use_touch_obs"]:
         obs_mode.append("touch")
     obs_mode = "_".join(obs_mode)
 
